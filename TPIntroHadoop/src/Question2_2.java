@@ -18,7 +18,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-public class Question2_1 {	
+public class Question2_2 {	
 	public static class MyMapper extends Mapper<LongWritable, Text, Text, Text> {
 		@Override
 		protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -64,8 +64,8 @@ public class Question2_1 {
 		String output = otherArgs[1];
 		int k = Integer.parseInt(otherArgs[2]);
 
-		Job job = Job.getInstance(conf, "Question2_1");
-		job.setJarByClass(Question2_1.class);
+		Job job = Job.getInstance(conf, "Question2_2");
+		job.setJarByClass(Question2_2.class);
 
 		job.setMapperClass(MyMapper.class);
 		job.setMapOutputKeyClass(Text.class);
