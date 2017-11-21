@@ -10,7 +10,7 @@ public class StringAndInt implements Comparable<StringAndInt> {
 
 	@Override
 	public int compareTo(StringAndInt o) {
-		return number - o.number;
+		return o.number - number;
 	}
 
 }
