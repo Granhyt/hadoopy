@@ -22,10 +22,10 @@ public class Question2_1 {
 	public static class MyMapper extends Mapper<LongWritable, Text, Text, Text> {
 		@Override
 		protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-			String[] fields = value.toString().split("\\t+");
-			String temp = Country.getCountryAt(Double.parseDouble(fields[11]), Double.parseDouble(fields[10])).toString();
+			String[] fields = value.toString().split("\\t", -1);
+			Country temp = Country.getCountryAt(Double.parseDouble(fields[11]), Double.parseDouble(fields[10]));
 			if (temp != null) {
-				Text country = new Text(temp);
+				Text country = new Text(temp.toString());
 				for (String tag : java.net.URLDecoder.decode(fields[8].toString()).split("\\t+")) {				
 					context.write(new Text(country), new Text(tag));
 				}
@@ -68,7 +68,7 @@ public class Question2_1 {
 
 		job.setMapperClass(MyMapper.class);
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(IntWritable.class);
+		job.setMapOutputValueClass(Text.class);
 
 		job.setReducerClass(MyReducer.class);
 		job.setOutputKeyClass(Text.class);
