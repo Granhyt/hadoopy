@@ -19,44 +19,73 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 public class Question2_2 {	
-	public static class MyMapper extends Mapper<LongWritable, Text, Text, Text> {
+	public static class MyMapper extends Mapper<LongWritable, Text, Text, StringAndIntWritable> {
 		@Override
 		protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			String[] fields = value.toString().split("\\t", -1);
 			Country temp = Country.getCountryAt(Double.parseDouble(fields[11]), Double.parseDouble(fields[10]));
 			if (temp != null) {
 				Text country = new Text(temp.toString());
-				for (String tag : java.net.URLDecoder.decode(fields[8].toString()).split(",")) {				
-					context.write(new Text(country), new Text(tag));
+				for (String tag : java.net.URLDecoder.decode(fields[8].toString()).split(",")) {
+					StringAndIntWritable saiw = new StringAndIntWritable();
+					saiw.set(new Text(tag), new IntWritable(1));
+					context.write(new Text(country), saiw);
 				}
 			}
 		}
 	}
 
-	public static class MyReducer extends Reducer<Text, Text, Text, Text> {
+	public static class MyReducer extends Reducer<Text, StringAndIntWritable, Text, Text> {
 		@Override
-		protected void reduce(Text key, Iterable<Text> tags, Context context)
+		protected void reduce(Text key, Iterable<StringAndIntWritable> tags, Context context)
 				throws IOException, InterruptedException {
-			HashMap<String,Integer> hmap = new HashMap<String, Integer>();
-			for (Text tag : tags) {
-				if (hmap.containsKey(tag.toString()))
-					hmap.put(tag.toString(), hmap.get(tag.toString()) + 1);
+			HashMap<String, IntWritable> hmap = new HashMap<String, IntWritable>();
+			for (StringAndIntWritable e : tags) {
+				if (hmap.containsKey(e.tag.toString()))
+					hmap.put(e.tag.toString(), new IntWritable(hmap.get(e.tag.toString()).get() + 1));
 				else
-					hmap.put(tag.toString(), 1);
+					hmap.put(e.tag.toString(), new IntWritable(e.number.get()));
 			}
 			int k = context.getConfiguration().getInt("k", 20);
-			PriorityQueue<StringAndInt> queue = new PriorityQueue<StringAndInt>(k);
-			for (Entry<String, Integer> e : hmap.entrySet()) {
-				queue.add(new StringAndInt(e.getKey(), e.getValue()));
+			PriorityQueue<StringAndIntWritable> queue = new PriorityQueue<StringAndIntWritable>(k);
+			for (Entry<String, IntWritable> e : hmap.entrySet()) {
+				StringAndIntWritable saiw = new StringAndIntWritable();
+				saiw.set(new Text(e.getKey()), e.getValue());
+				queue.add(saiw);
 			}
 			String s = "";
 			for (int i=0; i<k; i++) {
-				StringAndInt e = queue.poll();
-				if (e != null) {
-					s += e.tag + ":" + String.valueOf(e.number) + " ";
-				}
+				StringAndIntWritable e = queue.poll();
+				if (e != null) s += e.tag.toString() + ":" + e.number.toString() + " ";
 			}
 			context.write(key, new Text(s));
+		}
+	}
+	
+	public static class MyCombiner extends Reducer<Text, StringAndIntWritable, Text, StringAndIntWritable> {
+		@Override
+		protected void reduce(Text key, Iterable<StringAndIntWritable> tags, Context context)
+				throws IOException, InterruptedException {
+			HashMap<String, IntWritable> hmap = new HashMap<String, IntWritable>();
+			for (StringAndIntWritable e : tags) {
+				if (hmap.containsKey(e.tag.toString()))
+					hmap.put(e.tag.toString(), new IntWritable(hmap.get(e.tag.toString()).get() + 1));
+				else
+					hmap.put(e.tag.toString(), e.number);
+			}
+			int k = context.getConfiguration().getInt("k", 20);
+			PriorityQueue<StringAndIntWritable> queue = new PriorityQueue<StringAndIntWritable>(k);
+			for (Entry<String, IntWritable> e : hmap.entrySet()) {
+				StringAndIntWritable saiw = new StringAndIntWritable();
+				saiw.set(new Text(e.getKey()), e.getValue());
+				queue.add(saiw);
+			}
+			for (int i=0; i<k; i++) {
+				StringAndIntWritable e = queue.poll();
+				if (e != null) {
+					context.write(key, e);
+				}
+			}
 		}
 	}
 	
@@ -73,11 +102,16 @@ public class Question2_2 {
 
 		job.setMapperClass(MyMapper.class);
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(Text.class);
+		job.setMapOutputValueClass(StringAndIntWritable.class);
+		
+		job.setCombinerClass(MyCombiner.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(StringAndIntWritable.class);
 
 		job.setReducerClass(MyReducer.class);
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(IntWritable.class);
+		job.setOutputValueClass(Text.class);
+		
 		job.getConfiguration().setInt("k", k);
 		
 		FileInputFormat.addInputPath(job, new Path(input));

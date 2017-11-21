@@ -52,9 +52,7 @@ public class Question2_1 {
 			String s = "";
 			for (int i=0; i<k; i++) {
 				StringAndInt e = queue.poll();
-				if (e != null) {
-					s += e.tag + ":" + String.valueOf(e.number) + " ";
-				}
+				if (e != null) s += e.tag + ":" + String.valueOf(e.number) + " ";
 			}
 			context.write(key, new Text(s));
 		}
@@ -77,7 +75,8 @@ public class Question2_1 {
 
 		job.setReducerClass(MyReducer.class);
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(IntWritable.class);
+		job.setOutputValueClass(Text.class);
+		
 		job.getConfiguration().setInt("k", k);
 		
 		FileInputFormat.addInputPath(job, new Path(input));
